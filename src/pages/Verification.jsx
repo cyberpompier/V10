@@ -12,19 +12,17 @@ function Verification() {
   const [comment, setComment] = useState('');
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [showCommentPopup, setShowCommentPopup] = useState(false);
-  const [selectedStatus, setSelectedStatus] = null;
+  const [selectedStatus, setSelectedStatus] = useState(null); 
   const [user, setUser] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true); 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
-
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -32,10 +30,12 @@ function Verification() {
       try {
         const q = query(collection(db, 'materials'), where('affection', '==', truckId));
         const querySnapshot = await getDocs(q);
-        const items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Load existing status from Firebase
+        const items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setEquipment(items);
       } catch (error) {
         console.error("Erreur lors de la récupération du matériel :", error);
+      } finally {
+        setLoading(false); 
       }
     };
 
@@ -62,7 +62,6 @@ function Verification() {
     setComment('');
     setShowCommentPopup(true);
     setSelectedStatus('invalid');
-    // Update status in Firebase
     try {
       const itemDocRef = doc(db, 'materials', itemId);
       await updateDoc(itemDocRef, { status: 'invalid' });
@@ -76,7 +75,6 @@ function Verification() {
     setComment('');
     setShowCommentPopup(true);
     setSelectedStatus('alert');
-    // Update status in Firebase
     try {
       const itemDocRef = doc(db, 'materials', itemId);
       await updateDoc(itemDocRef, { status: 'alert' });
@@ -95,7 +93,6 @@ function Verification() {
       const itemDocRef = doc(db, 'materials', selectedItemId);
       const now = new Date();
 
-      // Fetch user document from 'users' collection
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('uid', '==', user.uid));
       const querySnapshot = await getDocs(q);
@@ -170,7 +167,6 @@ function Verification() {
         return;
       }
 
-      // Fetch user document from 'users' collection
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('uid', '==', user.uid));
       const querySnapshot = await getDocs(q);
@@ -179,7 +175,6 @@ function Verification() {
         const userDoc = querySnapshot.docs[0].data();
         const now = new Date();
 
-        // Update the vehicle document with verification information
         const vehicleRef = collection(db, 'vehicles');
         const vehicleQuery = query(vehicleRef, where('denomination', '==', truckId));
         const vehicleSnapshot = await getDocs(vehicleQuery);
@@ -206,49 +201,53 @@ function Verification() {
 
   return (
     <main className="main-content">
-      <div className="equipment-list">
-        {equipment.map((item, index) => (
-          <div
-            key={item.id}
-            className="equipment-item"
-            style={{ backgroundColor: getStatusColor(item.status) }}
-          >
-            <img
-              src={item.photo}
-              alt={item.denomination}
-              className="equipment-image"
-              style={{ cursor: 'pointer' }}
-            />
-            <div className="equipment-details">
-              <div className="equipment-name">
-                {item.denomination}
-                {item.comment && (
-                  <FaInfoCircle
-                    size={16}
-                    style={{ cursor: 'pointer', marginLeft: '5px' }}
-                    onClick={() => handleInfoClick(item)}
-                  />
-                )}
+      {loading ? (
+        <p>Loading...</p> 
+      ) : (
+        <div className="equipment-list">
+          {equipment.map((item, index) => (
+            <div
+              key={item.id}
+              className="equipment-item"
+              style={{ backgroundColor: getStatusColor(item.status) }}
+            >
+              <img
+                src={item.photo}
+                alt={item.denomination}
+                className="equipment-image"
+                style={{ cursor: 'pointer' }}
+              />
+              <div className="equipment-details">
+                <div className="equipment-name">
+                  {item.denomination}
+                  {item.comment && (
+                    <FaInfoCircle
+                      size={16}
+                      style={{ cursor: 'pointer', marginLeft: '5px' }}
+                      onClick={() => handleInfoClick(item)}
+                    />
+                  )}
+                </div>
+                <p>Quantité: {item.quantity}</p>
+                <a href="#">Documentation</a>
+                <p>Affectation: {item.affection}</p>
+                <p>Emplacement: {item.emplacement}</p>
               </div>
-              <p>Quantité: {item.quantity}</p>
-              <a href="#">Documentation</a>
-              <p>Affectation: {item.affection}</p>
-              <p>Emplacement: {item.emplacement}</p>
+              <div className="equipment-actions">
+                <div className="action-button valid" onClick={() => handleValidClick(item.id)}>
+                  <FaCheck size={20} />
+                </div>
+                <div className="action-button invalid" onClick={() => handleInvalidClick(item.id)}>
+                  <FaTimes size={20} />
+                </div>
+                <div className="action-button alert" onClick={() => handleAlertClick(item.id)}>
+                  <FaExclamationTriangle size={20} />
+                </div>
+              </div>
             </div>
-            <div className="equipment-actions">
-              <div className="action-button valid" onClick={() => handleValidClick(item.id)}>
-                <FaCheck size={20} />
-              </div>
-              <div className="action-button invalid" onClick={() => handleInvalidClick(item.id)}>
-                <FaTimes size={20} />
-              </div>
-              <div className="action-button alert" onClick={() => handleAlertClick(item.id)}>
-                <FaExclamationTriangle size={20} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {showCommentPopup && selectedItem && (
         <div className="modal">

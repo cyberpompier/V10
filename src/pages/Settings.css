@@ -5,7 +5,9 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin: 10px;
+  margin: 10px auto; /*  changed margin */
+  display: block; /* added display */
+  width: fit-content; /* added width */
 }
 
 .settings-button:hover {
