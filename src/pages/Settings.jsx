@@ -56,20 +56,6 @@ function Settings() {
   }, []);
 
   useEffect(() => {
-    // Update available emplacements based on selected vehicle
-    if (editMaterialAffection) {
-      const selectedVehicle = vehicles.find(v => v.denomination === editMaterialAffection);
-      if (selectedVehicle) {
-        setEmplacements(selectedVehicle.emplacements);
-      } else {
-        setEmplacements([]);
-      }
-    } else {
-      setEmplacements([]);
-    }
-  }, [editMaterialAffection, vehicles]);
-
-  useEffect(() => {
     const fetchMaterials = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'materials'));
@@ -82,6 +68,20 @@ function Settings() {
 
     fetchMaterials();
   }, []);
+
+  useEffect(() => {
+    // Update available emplacements based on selected vehicle
+    if (editMaterialAffection) {
+      const selectedVehicle = vehicles.find(v => v.denomination === editMaterialAffection);
+      if (selectedVehicle) {
+        setEmplacements(selectedVehicle.emplacements);
+      } else {
+        setEmplacements([]);
+      }
+    } else {
+      setEmplacements([]);
+    }
+  }, [editMaterialAffection, vehicles]);
 
   useEffect(() => {
     // Filter materials based on selected vehicle and emplacement
@@ -215,6 +215,11 @@ function Settings() {
         return filtered;
     };
 
+    const getVehicleEmplacements = () => {
+        const selectedVehicle = vehicles.find(v => v.denomination === editMaterialAffection);
+        return selectedVehicle ? selectedVehicle.emplacements : [];
+    };
+
   return (
     <main className="main-content">
       <button onClick={openVehicleForm} className="settings-button">Ajouter un véhicule</button>
@@ -260,27 +265,6 @@ function Settings() {
                 placeholder="Emplacements"
                 value={newVehicleEmplacements}
                 onChange={(e) => setNewVehicleEmplacements(e.target.value)}
-                className="settings-input"
-              />
-              <input
-                type="text"
-                placeholder="Photo URL"
-                value={newVehiclePhoto}
-                onChange={(e) => setNewVehiclePhoto(e.target.value)}
-                className="settings-input"
-              />
-              <input
-                type="text"
-                placeholder="Lien (optional)"
-                value={newVehicleLien}
-                onChange={(e) => setNewVehicleLien(e.target.value)}
-                className="settings-input"
-              />
-              <input
-                type="text"
-                placeholder="Documentation URL (optional)"
-                value={newVehicleDocumentation}
-                onChange={(e) => setNewVehicleDocumentation(e.target.value)}
                 className="settings-input"
               />
               <div className="settings-buttons">
@@ -377,7 +361,7 @@ function Settings() {
                 className="settings-input"
               >
                 <option value="">Sélectionner un emplacement</option>
-                {emplacements.map(emplacement => (
+                {getVehicleEmplacements().map(emplacement => (
                   <option key={emplacement} value={emplacement}>{emplacement}</option>
                 ))}
               </select>
