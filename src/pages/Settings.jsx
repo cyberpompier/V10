@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import './Settings.css';
 
 function Settings() {
@@ -22,6 +22,39 @@ function Settings() {
   const [newMaterialEmplacement, setNewMaterialEmplacement] = useState('');
   const [newMaterialPhoto, setNewMaterialPhoto] = useState('');
   const [newMaterialDocumentation, setNewMaterialDocumentation] = useState('');
+
+  const [vehicles, setVehicles] = useState([]);
+  const [emplacements, setEmplacements] = useState([]);
+
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'vehicles'));
+        const vehicleList = querySnapshot.docs.map(doc => ({
+          denomination: doc.data().denomination,
+          emplacements: doc.data().emplacements ? doc.data().emplacements.split(',').map(s => s.trim()) : []
+        }));
+        setVehicles(vehicleList);
+      } catch (error) {
+        console.error("Error fetching vehicles:", error);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
+
+  useEffect(() => {
+    if (newMaterialAffection) {
+      const selectedVehicle = vehicles.find(v => v.denomination === newMaterialAffection);
+      if (selectedVehicle) {
+        setEmplacements(selectedVehicle.emplacements);
+      } else {
+        setEmplacements([]);
+      }
+    } else {
+      setEmplacements([]);
+    }
+  }, [newMaterialAffection, vehicles]);
 
   const handleAddVehicle = async (e) => {
     e.preventDefault();
@@ -73,10 +106,18 @@ function Settings() {
     }
   };
 
+  const openVehicleForm = () => {
+    setShowVehicleForm(true);
+  };
+
+  const openMaterialForm = () => {
+    setShowMaterialForm(true);
+  };
+
   return (
     <main className="main-content">
-      <button onClick={() => setShowVehicleForm(true)} className="settings-button">Ajouter un véhicule</button>
-      <button onClick={() => setShowMaterialForm(true)} className="settings-button">Ajouter un matériel</button>
+      <button onClick={openVehicleForm} className="settings-button">Ajouter un véhicule</button>
+      <button onClick={openMaterialForm} className="settings-button">Ajouter un matériel</button>
 
       {showVehicleForm && (
         <div className="modal">
@@ -169,20 +210,26 @@ function Settings() {
                 onChange={(e) => setNewMaterialQuantity(e.target.value)}
                 className="settings-input"
               />
-              <input
-                type="text"
-                placeholder="Affection"
+              <select
                 value={newMaterialAffection}
                 onChange={(e) => setNewMaterialAffection(e.target.value)}
                 className="settings-input"
-              />
-              <input
-                type="text"
-                placeholder="Emplacement"
+              >
+                <option value="">Select Vehicle</option>
+                {vehicles.map(vehicle => (
+                  <option key={vehicle.denomination} value={vehicle.denomination}>{vehicle.denomination}</option>
+                ))}
+              </select>
+              <select
                 value={newMaterialEmplacement}
                 onChange={(e) => setNewMaterialEmplacement(e.target.value)}
                 className="settings-input"
-              />
+              >
+                <option value="">Select Emplacement</option>
+                {emplacements.map(emplacement => (
+                  <option key={emplacement} value={emplacement}>{emplacement}</option>
+                ))}
+              </select>
               <input
                 type="text"
                 placeholder="Photo URL"

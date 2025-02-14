@@ -12,8 +12,8 @@ function FireTruck() {
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [showCommentsPopup, setShowCommentsPopup] = useState(false);
   const [truckComments, setTruckComments] = useState([]);
-  const [trucksWithComments, setTrucksWithComments] = useState([]);
   const [user, setUser] = useState(null);
+  const [trucksWithNonOkStatus, setTrucksWithNonOkStatus] = useState([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -47,19 +47,19 @@ function FireTruck() {
       }
     };
 
-    const fetchTrucksWithComments = async () => {
+    const fetchTrucksWithNonOkStatus = async () => {
       try {
-        const q = query(collection(db, 'materials'), where('comment', '!=', null));
+        const q = query(collection(db, 'materials'), where('status', '!=', 'ok'));
         const querySnapshot = await getDocs(q);
         const trucks = new Set(querySnapshot.docs.map(doc => doc.data().affection));
-        setTrucksWithComments(Array.from(trucks));
+        setTrucksWithNonOkStatus(Array.from(trucks));
       } catch (error) {
-        console.error("Erreur lors de la récupération des camions avec commentaires :", error);
+        console.error("Erreur lors de la récupération des camions avec status non ok :", error);
       }
     };
 
     fetchFireTrucks();
-    fetchTrucksWithComments();
+    fetchTrucksWithNonOkStatus();
   }, []);
 
   const handleVerifyClick = (denomination) => {
@@ -90,8 +90,8 @@ function FireTruck() {
     setShowCommentsPopup(false);
   };
 
-  const hasComments = (truck) => {
-    return trucksWithComments.includes(truck.denomination);
+  const hasNonOkStatus = (truck) => {
+    return trucksWithNonOkStatus.includes(truck.denomination);
   };
 
   const isVerificationVisible = (truck) => {
@@ -118,7 +118,7 @@ function FireTruck() {
             <div className="truck-details">
               <h3>
                 {truck.denomination}
-                {hasComments(truck) && (
+                {hasNonOkStatus(truck) && (
                   <span className="info-icon" onClick={() => handleInfoClick(truck)}>
                     <FaInfoCircle className="blinking-icon" />
                   </span>

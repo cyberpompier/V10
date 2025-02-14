@@ -25,7 +25,7 @@ function App() {
       case '/materiels':
         return 'Materiels';
       case '/settings':
-        return 'Settings';
+        return 'Parametrage';
       default:
         return 'My PWA App';
     }
