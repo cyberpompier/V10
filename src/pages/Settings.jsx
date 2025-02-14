@@ -6,6 +6,7 @@ import './Settings.css';
 function Settings() {
   const [showVehicleForm, setShowVehicleForm] = useState(false);
   const [showMaterialForm, setShowMaterialForm] = useState(false);
+  const [showEditMaterialForm, setShowEditMaterialForm] = useState(false);
 
   const [newVehicleDenomination, setNewVehicleDenomination] = useState('');
   const [newVehicleImmatriculation, setNewVehicleImmatriculation] = useState('');
@@ -25,6 +26,17 @@ function Settings() {
 
   const [vehicles, setVehicles] = useState([]);
   const [emplacements, setEmplacements] = useState([]);
+  const [materials, setMaterials] = useState([]); // All materials
+  const [filteredMaterials, setFilteredMaterials] = useState([]); // Materials after filtering
+
+  // New state for edit form
+  const [editMaterialId, setEditMaterialId] = useState('');
+  const [editMaterialDenomination, setEditMaterialDenomination] = useState('');
+  const [editMaterialQuantity, setEditMaterialQuantity] = useState('');
+  const [editMaterialAffection, setEditMaterialAffection] = useState('');
+  const [editMaterialEmplacement, setEditMaterialEmplacement] = useState('');
+  const [editMaterialPhoto, setEditMaterialPhoto] = useState('');
+  const [editMaterialDocumentation, setEditMaterialDocumentation] = useState('');
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -44,8 +56,9 @@ function Settings() {
   }, []);
 
   useEffect(() => {
-    if (newMaterialAffection) {
-      const selectedVehicle = vehicles.find(v => v.denomination === newMaterialAffection);
+    // Update available emplacements based on selected vehicle
+    if (editMaterialAffection) {
+      const selectedVehicle = vehicles.find(v => v.denomination === editMaterialAffection);
       if (selectedVehicle) {
         setEmplacements(selectedVehicle.emplacements);
       } else {
@@ -54,7 +67,33 @@ function Settings() {
     } else {
       setEmplacements([]);
     }
-  }, [newMaterialAffection, vehicles]);
+  }, [editMaterialAffection, vehicles]);
+
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'materials'));
+        const materialList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setMaterials(materialList);
+      } catch (error) {
+        console.error("Error fetching materials:", error);
+      }
+    };
+
+    fetchMaterials();
+  }, []);
+
+  useEffect(() => {
+    // Filter materials based on selected vehicle and emplacement
+    let filtered = [...materials];
+    if (editMaterialAffection && editMaterialAffection !== '') {
+      filtered = filtered.filter(m => m.affection === editMaterialAffection);
+    }
+    if (editMaterialEmplacement && editMaterialEmplacement !== '') {
+      filtered = filtered.filter(m => m.emplacement === editMaterialEmplacement);
+    }
+    setFilteredMaterials(filtered);
+  }, [editMaterialAffection, editMaterialEmplacement, materials]);
 
   const handleAddVehicle = async (e) => {
     e.preventDefault();
@@ -106,6 +145,24 @@ function Settings() {
     }
   };
 
+  const handleEditMaterial = async (e) => {
+    e.preventDefault();
+    try {
+      const materialDocRef = doc(db, 'materials', editMaterialId);
+      await updateDoc(materialDocRef, {
+        denomination: editMaterialDenomination,
+        quantity: editMaterialQuantity,
+        affection: editMaterialAffection,
+        emplacement: editMaterialEmplacement,
+        photo: editMaterialPhoto,
+        documentation: editMaterialDocumentation
+      });
+      setShowEditMaterialForm(false);
+    } catch (error) {
+      console.error("Error editing material:", error);
+    }
+  };
+
   const openVehicleForm = () => {
     setShowVehicleForm(true);
   };
@@ -114,10 +171,55 @@ function Settings() {
     setShowMaterialForm(true);
   };
 
+  const openEditMaterialForm = () => {
+    setShowEditMaterialForm(true);
+  };
+
+  const handleMaterialSelection = (e) => {
+    const selectedMaterialId = e.target.value;
+    setEditMaterialId(selectedMaterialId);
+
+    const selectedMaterial = materials.find(m => m.id === selectedMaterialId);
+
+    if (selectedMaterial) {
+      setEditMaterialDenomination(selectedMaterial.denomination);
+      setEditMaterialQuantity(selectedMaterial.quantity);
+      setEditMaterialAffection(selectedMaterial.affection);
+      setEditMaterialEmplacement(selectedMaterial.emplacement);
+      setEditMaterialPhoto(selectedMaterial.photo);
+      setEditMaterialDocumentation(selectedMaterial.documentation);
+    } else {
+      // Clear the form if no material is selected
+      setEditMaterialDenomination('');
+      setEditMaterialQuantity('');
+      setEditMaterialAffection('');
+      setEditMaterialEmplacement('');
+      setEditMaterialPhoto('');
+      setEditMaterialDocumentation('');
+    }
+  };
+
+  const handleEditAffectionChange = (e) => {
+    setEditMaterialAffection(e.target.value);
+    setEditMaterialEmplacement(''); // Reset emplacement when vehicle changes
+  };
+
+    const getFilteredMaterials = () => {
+        let filtered = [...materials];
+        if (editMaterialAffection && editMaterialAffection !== '') {
+            filtered = filtered.filter(m => m.affection === editMaterialAffection);
+        }
+        if (editMaterialEmplacement && editMaterialEmplacement !== '') {
+            filtered = filtered.filter(m => m.emplacement === editMaterialEmplacement);
+        }
+        return filtered;
+    };
+
   return (
     <main className="main-content">
       <button onClick={openVehicleForm} className="settings-button">Ajouter un véhicule</button>
       <button onClick={openMaterialForm} className="settings-button">Ajouter un matériel</button>
+      <button onClick={openEditMaterialForm} className="settings-button">Edition du materiel</button>
 
       {showVehicleForm && (
         <div className="modal">
@@ -205,7 +307,7 @@ function Settings() {
               />
               <input
                 type="number"
-                placeholder="Quantity"
+                placeholder="Quantité"
                 value={newMaterialQuantity}
                 onChange={(e) => setNewMaterialQuantity(e.target.value)}
                 className="settings-input"
@@ -215,7 +317,7 @@ function Settings() {
                 onChange={(e) => setNewMaterialAffection(e.target.value)}
                 className="settings-input"
               >
-                <option value="">Select Vehicle</option>
+                <option value="">Sélectionner un véhicule</option>
                 {vehicles.map(vehicle => (
                   <option key={vehicle.denomination} value={vehicle.denomination}>{vehicle.denomination}</option>
                 ))}
@@ -225,7 +327,7 @@ function Settings() {
                 onChange={(e) => setNewMaterialEmplacement(e.target.value)}
                 className="settings-input"
               >
-                <option value="">Select Emplacement</option>
+                <option value="">Sélectionner un emplacement</option>
                 {emplacements.map(emplacement => (
                   <option key={emplacement} value={emplacement}>{emplacement}</option>
                 ))}
@@ -239,7 +341,7 @@ function Settings() {
               />
               <input
                 type="text"
-                placeholder="Documentation URL (optional)"
+                placeholder="Documentation URL (optionnel)"
                 value={newMaterialDocumentation}
                 onChange={(e) => setNewMaterialDocumentation(e.target.value)}
                 className="settings-input"
@@ -247,6 +349,81 @@ function Settings() {
               <div className="settings-buttons">
                 <button type="submit" className="settings-submit-button">Ajouter</button>
                 <button type="button" className="settings-cancel-button" onClick={() => setShowMaterialForm(false)}>Annuler</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditMaterialForm && (
+        <div className="modal">
+          <div className="modal-content settings-modal">
+            <span className="close" onClick={() => setShowEditMaterialForm(false)}>&times;</span>
+            <h3>Edition du materiel</h3>
+            <form onSubmit={handleEditMaterial} className="settings-form">
+              <select
+                value={editMaterialAffection}
+                onChange={handleEditAffectionChange}
+                className="settings-input"
+              >
+                <option value="">Sélectionner un véhicule</option>
+                {vehicles.map(vehicle => (
+                  <option key={vehicle.denomination} value={vehicle.denomination}>{vehicle.denomination}</option>
+                ))}
+              </select>
+              <select
+                value={editMaterialEmplacement}
+                onChange={(e) => setEditMaterialEmplacement(e.target.value)}
+                className="settings-input"
+              >
+                <option value="">Sélectionner un emplacement</option>
+                {emplacements.map(emplacement => (
+                  <option key={emplacement} value={emplacement}>{emplacement}</option>
+                ))}
+              </select>
+              <select
+                value={editMaterialId}
+                onChange={handleMaterialSelection}
+                className="settings-input"
+              >
+                <option value="">Sélectionner un matériel</option>
+                {getFilteredMaterials().map(material => (
+                  <option key={material.id} value={material.id}>
+                    {material.denomination}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Denomination"
+                value={editMaterialDenomination}
+                onChange={(e) => setEditMaterialDenomination(e.target.value)}
+                className="settings-input"
+              />
+              <input
+                type="number"
+                placeholder="Quantité"
+                value={editMaterialQuantity}
+                onChange={(e) => setEditMaterialQuantity(e.target.value)}
+                className="settings-input"
+              />
+              <input
+                type="text"
+                placeholder="Photo URL"
+                value={editMaterialPhoto}
+                onChange={(e) => setEditMaterialPhoto(e.target.value)}
+                className="settings-input"
+              />
+              <input
+                type="text"
+                placeholder="Documentation URL (optionnel)"
+                value={editMaterialDocumentation}
+                onChange={(e) => setEditMaterialDocumentation(e.target.value)}
+                className="settings-input"
+              />
+              <div className="settings-buttons">
+                <button type="submit" className="settings-submit-button">Modifier</button>
+                <button type="button" className="settings-cancel-button" onClick={() => setShowEditMaterialForm(false)}>Annuler</button>
               </div>
             </form>
           </div>

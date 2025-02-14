@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { FaInfoCircle } from 'react-icons/fa';
@@ -6,6 +6,9 @@ import './Materiels.css';
 
 function Materiels() {
   const [equipment, setEquipment] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [showCommentPopup, setShowCommentPopup] = useState(false);
   const [vehicleFilter, setVehicleFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
   const [vehicles, setVehicles] = useState(['all']);
@@ -41,7 +44,7 @@ function Materiels() {
     fetchEquipment();
   }, [vehicleFilter, locationFilter]);
 
-  const handleImageClick = (imageSrc) => {
+  const handleImageClick = (imageSrc) => () => {
     setSelectedImage(imageSrc);
   };
 
@@ -49,12 +52,13 @@ function Materiels() {
     setSelectedImage(null);
   };
 
-  const handleBeaconClick = (item) => {
-    // Your existing handleBeaconClick logic
+  const handleBeaconClick = (item) => () => {
+    setSelectedEquipment(item);
+    setShowCommentPopup(true);
   };
 
   const closeCommentPopup = () => {
-    // Your existing closeCommentPopup logic
+    setShowCommentPopup(false);
   };
 
   return (
@@ -90,7 +94,7 @@ function Materiels() {
               src={item.photo}
               alt={item.denomination}
               className="equipment-image"
-              onClick={handleImageClick}
+              onClick={handleImageClick(item.photo) }
               style={{ cursor: 'pointer' }}
             />
             <div className="equipment-details">
@@ -103,13 +107,48 @@ function Materiels() {
               <p>Emplacement: {item.emplacement}</p>
             </div>
             {item.comment && (
-              <div className="beacon" onClick={handleBeaconClick}>
+              <div className="beacon" onClick={handleBeaconClick(item)}>
                 <span className="beacon-icon">🚨</span>
               </div>
             )}
           </div>
         ))}
       </div>
+
+      {selectedImage && (
+        <div className="modal" onClick={closeModal}>
+          <div className="modal-content">
+            <span className="close" onClick={closeModal}>&times;</span>
+            <img src={selectedImage} alt="Equipment Full Size" style={{ maxWidth: '90%', maxHeight: '90%' }} />
+          </div>
+        </div>
+      )}
+
+      {showCommentPopup && selectedEquipment && (
+        <div className="modal">
+          <div className="modal-content comment-modal">
+            <span className="close" onClick={closeCommentPopup}>&times;</span>
+            <div className="comment-header">
+              {selectedEquipment.timestamp && selectedEquipment.grade && selectedEquipment.name && (
+                <p className="comment-info">
+                  {new Date(selectedEquipment.timestamp).toLocaleString()} - {selectedEquipment.grade} - {selectedEquipment.name}
+                </p>
+              )}
+              {selectedEquipment.userPhoto && (
+                <img
+                  src={selectedEquipment.userPhoto}
+                  alt="User"
+                  className="comment-user-photo"
+                />
+              )}
+            </div>
+            <div className="comment-text">
+              {selectedEquipment.comment}
+            </div>
+            <button className="close-button" onClick={closeCommentPopup}>Fermer</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

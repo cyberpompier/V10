@@ -5,6 +5,7 @@ import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/fire
 import { FaCheck, FaTimes, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
 import './Materiels.css';
 import { onAuthStateChanged } from "firebase/auth";
+import './Verification.css'; // Import Verification.css
 
 function Verification() {
   const { truckId } = useParams();
@@ -12,17 +13,19 @@ function Verification() {
   const [comment, setComment] = useState('');
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [showCommentPopup, setShowCommentPopup] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState(null); 
+  const [selectedStatus, setSelectedStatus] = useState(null);
   const [user, setUser] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true); 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -34,8 +37,6 @@ function Verification() {
         setEquipment(items);
       } catch (error) {
         console.error("Erreur lors de la récupération du matériel :", error);
-      } finally {
-        setLoading(false); 
       }
     };
 
@@ -201,94 +202,60 @@ function Verification() {
 
   return (
     <main className="main-content">
-      {loading ? (
-        <p>Loading...</p> 
-      ) : (
-        <div className="equipment-list">
-          {equipment.map((item, index) => (
-            <div
-              key={item.id}
-              className="equipment-item"
-              style={{ backgroundColor: getStatusColor(item.status) }}
-            >
-              <img
-                src={item.photo}
-                alt={item.denomination}
-                className="equipment-image"
-                style={{ cursor: 'pointer' }}
-              />
-              <div className="equipment-details">
-                <div className="equipment-name">
-                  {item.denomination}
-                  {item.comment && (
-                    <FaInfoCircle
-                      size={16}
-                      style={{ cursor: 'pointer', marginLeft: '5px' }}
-                      onClick={() => handleInfoClick(item)}
-                    />
-                  )}
-                </div>
-                <p>Quantité: {item.quantity}</p>
-                <a href="#">Documentation</a>
-                <p>Affectation: {item.affection}</p>
-                <p>Emplacement: {item.emplacement}</p>
+      <div className="equipment-list">
+        {equipment.map((item, index) => (
+          <div
+            key={item.id}
+            className="equipment-item"
+            style={{ backgroundColor: getStatusColor(item.status) }}
+          >
+            <img
+              src={item.photo}
+              alt={item.denomination}
+              className="equipment-image"
+              style={{ cursor: 'pointer' }}
+            />
+            <div className="equipment-details">
+              <div className="equipment-name">
+                {item.denomination}
+                {item.comment && (
+                  <FaInfoCircle
+                    size={16}
+                    style={{ cursor: 'pointer', marginLeft: '5px' }}
+                    onClick={() => handleInfoClick(item)}
+                  />
+                )}
               </div>
-              <div className="equipment-actions">
-                <div className="action-button valid" onClick={() => handleValidClick(item.id)}>
-                  <FaCheck size={20} />
-                </div>
-                <div className="action-button invalid" onClick={() => handleInvalidClick(item.id)}>
-                  <FaTimes size={20} />
-                </div>
-                <div className="action-button alert" onClick={() => handleAlertClick(item.id)}>
-                  <FaExclamationTriangle size={20} />
-                </div>
+              <p>Quantité: {item.quantity}</p>
+              <a href="#">Documentation</a>
+              <p>Affectation: {item.affection}</p>
+              <p>Emplacement: {item.emplacement}</p>
+            </div>
+            <div className="equipment-actions">
+              <div className="action-button valid" onClick={() => handleValidClick(item.id)}>
+                <FaCheck size={20} />
+              </div>
+              <div className="action-button invalid" onClick={() => handleInvalidClick(item.id)}>
+                <FaTimes size={20} />
+              </div>
+              <div className="action-button alert" onClick={() => handleAlertClick(item.id)}>
+                <FaExclamationTriangle size={20} />
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {showCommentPopup && selectedItem && (
-        <div className="modal">
-          <div className="modal-content">
-            <span className="close" onClick={closeCommentPopup}>&times;</span>
-            {selectedItem.userPhoto && (
-              <img
-                src={selectedItem.userPhoto}
-                alt="User"
-                style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                }}
-              />
-            )}
-            {selectedItem.timestamp && selectedItem.grade && selectedItem.name && (
-              <p>
-                {new Date(selectedItem.timestamp).toLocaleString()} - {selectedItem.grade} - {selectedItem.name}
-              </p>
-            )}
-            <p><strong>{selectedItem.comment}</strong></p>
-            <button className="close-button" onClick={closeCommentPopup}>Fermer</button>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {showCommentPopup && !selectedItem && (
-        <div className="modal">
-          <div className="modal-content">
+        <div className="comment-input-modal modal">
+          <div className="comment-input-modal-content modal-content">
             <span className="close" onClick={() => setShowCommentPopup(false)}>&times;</span>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Enter comment"
+              placeholder="Entrez votre commentaire"
             />
-            <button onClick={() => handleCommentSubmit()}>Submit Comment</button>
+            <button onClick={() => handleCommentSubmit()}>Soumettre Commentaire</button>
           </div>
         </div>
       )}
